@@ -72,3 +72,8 @@ dotnet tool install --global dotnet-ef
 dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
+
+## create solution and add both projects
+dotnet new sln --name FullStackBudget
+dotnet sln add backend/backend.csproj
+dotnet sln add frontend/frontend.csproj
