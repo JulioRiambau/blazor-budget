@@ -74,6 +74,22 @@ dotnet ef database update
 ```
 
 ## create solution and add both projects
+```powershell
 dotnet new sln --name FullStackBudget
 dotnet sln add backend/backend.csproj
 dotnet sln add frontend/frontend.csproj
+```
+
+## setup mudblazor
+
+https://mudblazor.com/getting-started/installation#manual-install-add-imports
+
+```powershell
+dotnet new install MudBlazor.Templates
+
+dotnet add package MudBlazor
+```
+
+add @using MudBlazor in Imports.razor
+
+add css and js in index.html

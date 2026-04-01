@@ -1,0 +1,29 @@
+<MudDialog>
+    <TitleContent> <MudText Typo="Typo.h6">@Title</MudText> </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="Model.Name"
+                      Label="Name"
+                      Variant="Variant.Outlined"
+                      Required="true" />
+
+        <MudNumericField T="decimal"
+                         @bind-Value="Model.Amount"
+                         Label="Amount"
+                         Variant="Variant.Outlined"
+                         Min="0"
+                         Class="mt-3" />
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string Title { get; set; } = "Budget";
+    [Parameter] public BudgetDto Model { get; set; } = new();
+
+    private void Cancel() => MudDialog.Cancel();
+    private void Save() => MudDialog.Close(DialogResult.Ok(Model));
+}

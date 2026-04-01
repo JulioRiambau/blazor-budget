@@ -1,0 +1,64 @@
+<MudDialog>
+    <TitleContent> <MudText Typo="Typo.h6">@Title</MudText> </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="Model.Description"
+                      Label="Name"
+                      Variant="Variant.Outlined"
+                      Required="true" />
+
+        <MudNumericField T="decimal"
+                         @bind-Value="Model.Amount"
+                         Label="Amount"
+                         Variant="Variant.Outlined"
+                         Min="0"
+                         Class="mt-3" />
+
+        <MudDatePicker @bind-Date="selectedDate"
+                       Label="Date"
+                       Variant="Variant.Outlined"
+                       Class="mt-3" />
+
+        <MudSelect @bind-Value="Model.BudgetId"
+                   Label="Budget"
+                   Variant="Variant.Outlined"
+                   Class="mt-3"
+                   Required="true">
+            @foreach (var budget in Budgets)
+            {
+                <MudSelectItem Value="budget.Id">@budget.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string Title { get; set; } = "Expense";
+    [Parameter] public ExpenseDto Model { get; set; } = new();
+    [Parameter] public List<BudgetDto> Budgets { get; set; } = new();
+
+    private DateTime? selectedDate;
+
+    protected override void OnParametersSet()
+    {
+        // Convert DateOnly to DateTime for the picker
+        selectedDate = Model.Date != default
+            ? Model.Date.ToDateTime(TimeOnly.MinValue)
+            : null;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+    private void Save()
+    {
+        // Convert DateTime back to DateOnly
+        if (selectedDate.HasValue)
+        {
+            Model.Date = DateOnly.FromDateTime(selectedDate.Value);
+        }
+        MudDialog.Close(DialogResult.Ok(Model));
+    }
+}

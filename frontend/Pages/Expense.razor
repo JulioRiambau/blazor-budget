@@ -1,0 +1,127 @@
+﻿@page "/expenses"
+
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<MudTable Items="expenses" Hover="true" Bordered="true" Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Expenses</MudText>
+        <MudSpacer />
+        <MudButton Color="Color.Success"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   OnClick="@(() => AddBudgetAsync())">
+            Add Expense
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Id</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>Amount</MudTh>
+        <MudTh>Date</MudTh>
+        <MudTh>Budget</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Id</MudTd>
+        <MudTd>@context.Description</MudTd>
+        <MudTd>@context.Amount.ToString("C")</MudTd>
+        <MudTd>@context.Date</MudTd>
+        <MudTd>@GetBudgetName(context.BudgetId)</MudTd>
+        
+        <MudTd>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Outlined"
+                       Size="Size.Small"
+                       OnClick="@(() => EditExpenseAsync(context))">
+                Edit
+            </MudButton>
+            <MudButton Color="Color.Error"
+                       Variant="Variant.Outlined"
+                       Size="Size.Small"
+                       Class="ms-2"
+                       OnClick="@(() => DeleteExpense(context.Id))">
+                Delete
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+
+@code {
+    private List<BudgetDto> budgets = new();
+    private List<ExpenseDto> expenses = new();
+    private ExpenseDto newExpense = new() { Description = "New Expense", Amount = 0 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBudgets();
+        await LoadExpenses();
+    }
+
+    private async Task LoadBudgets()
+    {
+        budgets = await Http.GetFromJsonAsync<List<BudgetDto>>("budget") ?? new();
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await Http.GetFromJsonAsync<List<ExpenseDto>>("expense") ?? new();
+    }
+
+    private string GetBudgetName(int budgetId)
+    {
+        var budget = budgets.FirstOrDefault(b => b.Id == budgetId);
+        return budget?.Name ?? "Unknown";
+    }
+
+    private async Task AddBudgetAsync()
+    {
+        var dialog = await DialogService.ShowAsync<ExpenseEditorDialog>(
+            "Add Expense",
+            new DialogParameters
+            {
+                { nameof(ExpenseEditorDialog.Model), new ExpenseDto() },
+                { nameof(ExpenseEditorDialog.Budgets), budgets }
+            }
+        );
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            var newExpense = result.Data as ExpenseDto;
+            var response = await Http.PostAsJsonAsync("expense", newExpense);
+            if (response.IsSuccessStatusCode)
+                await LoadExpenses();
+        }
+    }
+    
+    private async Task EditExpenseAsync(ExpenseDto expense)
+    {
+        var dialog = await DialogService.ShowAsync<ExpenseEditorDialog>(
+            "Edit Expense",
+            new DialogParameters
+            {
+            { nameof(ExpenseEditorDialog.Model), expense },
+            { nameof(ExpenseEditorDialog.Budgets), budgets }
+            }
+        );
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            var updatedExpense = result.Data as ExpenseDto;
+            var response = await Http.PutAsJsonAsync($"expense/{updatedExpense.Id}", updatedExpense);
+            if (response.IsSuccessStatusCode)
+                await LoadExpenses();
+        }
+    }
+
+    private async Task DeleteExpense(int id)
+    {
+        var response = await Http.DeleteAsync($"expense/{id}");
+        if (response.IsSuccessStatusCode)
+            await LoadExpenses();
+    }
+
+}
