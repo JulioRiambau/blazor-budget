@@ -25,3 +25,7 @@ Migrations/
 # Others
 *.swp
 *.tmp
+
+#db
+
+*.db

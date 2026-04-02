@@ -1,0 +1,187 @@
+﻿@page "/"
+
+@inject HttpClient Http
+
+@using MudBlazor
+
+<PageTitle>Budget Dashboard</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Budget Dashboard</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.subtitle1">Month</MudText>
+
+        <MudSelect T="int" Value="selectedMonth" ValueChanged="OnMonthChanged" Dense="true" Style="min-width: 180px;">
+            @foreach (var month in Enumerable.Range(1, 12))
+            {
+                <MudSelectItem Value="@month">@GetMonthName(month)</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudText Typo="Typo.subtitle1" Class="ms-2">Year</MudText>
+
+        <MudSelect T="int" Value="selectedYear" ValueChanged="OnYearChanged" Dense="true" Style="min-width: 120px;">
+            @foreach (var year in availableYears)
+            {
+                <MudSelectItem Value="@year">@year</MudSelectItem>
+            }
+        </MudSelect>
+    </MudStack>
+</MudPaper>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle2">Total Planned</MudText>
+            <MudText Typo="Typo.h6">@totalPlanned.ToString("C")</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle2">Total Expense</MudText>
+            <MudText Typo="Typo.h6">@totalSpent.ToString("C")</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudStack Spacing="1">
+        <MudText Typo="Typo.subtitle2">Expenses vs Planned</MudText>
+
+        <MudProgressLinear Value="@SpendingProgressPercent"
+                           Min="0"
+                           Max="100"
+                           Rounded="true"
+                           Color="@SpendingProgressColor"
+                           Size="Size.Medium" />
+
+        <MudText Typo="Typo.caption">
+            @totalSpent.ToString("C") of @totalPlanned.ToString("C")
+            (@SpendingProgressPercent.ToString("0.##")%)
+        </MudText>
+    </MudStack>
+</MudPaper>
+
+<MudTable T="BudgetComparisonRow" Items="comparisonRows" Dense="true" Hover="true" Bordered="true" Striped="true">
+    <HeaderContent>
+        <MudTh>Budget</MudTh>
+        <MudTh Align="Align.Right">Budget Amount</MudTh>
+        <MudTh Align="Align.Right">Spent</MudTh>
+        <MudTh Align="Align.Right">Remaining</MudTh>
+        <MudTh>Status</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Budget">@context.BudgetName</MudTd>
+        <MudTd DataLabel="Budget Amount" Align="right">@context.BudgetAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Spent" Align="right">@context.SpentAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Remaining" Align="right">@context.RemainingAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@(context.IsOverBudget? Color.Error: Color.Success)" Variant="Variant.Filled" Size="Size.Small">
+                @(context.IsOverBudget ? "Over budget" : "Within budget")
+            </MudChip>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<BudgetDto> budgets = new();
+    private List<ExpenseDto> expenses = new();
+    private List<BudgetComparisonRow> comparisonRows = new();
+
+    private int selectedMonth = DateTime.Today.Month;
+    private int selectedYear = DateTime.Today.Year;
+    private decimal totalPlanned;
+    private decimal totalSpent;
+
+    private readonly List<int> availableYears = Enumerable.Range(DateTime.Today.Year - 5, 11).ToList();
+
+    private double SpendingProgressPercent =>
+    totalPlanned <= 0
+        ? 0
+        : Math.Min(100, (double)(totalSpent / totalPlanned * 100));
+
+    private Color SpendingProgressColor =>
+        totalPlanned <= 0
+            ? Color.Default
+            : totalSpent > totalPlanned
+                ? Color.Error
+                : totalSpent >= (totalPlanned * 0.8m)
+                    ? Color.Warning
+                    : Color.Success;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBudgets();
+        await LoadExpenses();
+        BuildComparison();
+    }
+
+    private async Task LoadBudgets()
+    {
+        budgets = await Http.GetFromJsonAsync<List<BudgetDto>>("budget") ?? new();
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await Http.GetFromJsonAsync<List<ExpenseDto>>("expense") ?? new();
+    }
+
+    private Task OnMonthChanged(int month)
+    {
+        selectedMonth = month;
+        BuildComparison();
+        return Task.CompletedTask;
+    }
+
+    private Task OnYearChanged(int year)
+    {
+        selectedYear = year;
+        BuildComparison();
+        return Task.CompletedTask;
+    }
+
+    private void BuildComparison()
+    {
+        var monthlyExpensesByBudget = expenses
+            .Where(e => e.Date.Month == selectedMonth && e.Date.Year == selectedYear)
+            .GroupBy(e => e.BudgetId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+
+        comparisonRows = budgets
+            .Select(b =>
+            {
+                monthlyExpensesByBudget.TryGetValue(b.Id, out var spent);
+                var remaining = b.Amount - spent;
+
+                return new BudgetComparisonRow
+                {
+                    BudgetName = b.Name,
+                    BudgetAmount = b.Amount,
+                    SpentAmount = spent,
+                    RemainingAmount = remaining,
+                    IsOverBudget = spent > b.Amount
+                };
+            })
+            .OrderBy(r => r.BudgetName)
+            .ToList();
+
+        totalPlanned = comparisonRows.Sum(x => x.BudgetAmount);
+        totalSpent = comparisonRows.Sum(x => x.SpentAmount);
+    }
+
+    private static string GetMonthName(int month) =>
+        month is >= 1 and <= 12
+            ? System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)
+            : string.Empty;
+
+    private sealed class BudgetComparisonRow
+    {
+        public string BudgetName { get; set; } = string.Empty;
+        public decimal BudgetAmount { get; set; }
+        public decimal SpentAmount { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public bool IsOverBudget { get; set; }
+    }
+}

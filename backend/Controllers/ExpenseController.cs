@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
 using backend;
+using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace backend.Controllers;
 
@@ -8,10 +9,12 @@ namespace backend.Controllers;
 public class ExpenseController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<ExpenseController> _logger;
 
-    public ExpenseController(AppDbContext context)
+    public ExpenseController(AppDbContext context, ILogger<ExpenseController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     [HttpGet(Name = "GetExpenses")]
@@ -59,6 +62,8 @@ public class ExpenseController : ControllerBase
     [HttpPut("{id}", Name = "UpdateExpense")]
     public IActionResult Update(int id, ExpenseDto newExpense)
     {
+        _logger.LogInformation("Updating expense with ID {ExpenseId} {Expense}", id, JsonSerializer.Serialize(newExpense));
+
         if (id != newExpense.Id)
         {
             return BadRequest("Expense ID mismatch.");
@@ -81,6 +86,7 @@ public class ExpenseController : ControllerBase
         existingExpense.Description = newExpense.Description;
         existingExpense.Amount = newExpense.Amount;
         existingExpense.BudgetId = newExpense.BudgetId;
+        existingExpense.Date = newExpense.Date;
         existingExpense.Budget = associatedBudget;
         _context.SaveChanges();
         return NoContent();

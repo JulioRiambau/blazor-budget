@@ -114,6 +114,8 @@
             var response = await Http.PutAsJsonAsync($"expense/{updatedExpense.Id}", updatedExpense);
             if (response.IsSuccessStatusCode)
                 await LoadExpenses();
+            else
+                Console.WriteLine($"Failed to update expense: {response.ReasonPhrase}");
         }
     }
 
