@@ -66,16 +66,16 @@
 <MudTable T="BudgetComparisonRow" Items="comparisonRows" Dense="true" Hover="true" Bordered="true" Striped="true">
     <HeaderContent>
         <MudTh>Budget</MudTh>
-        <MudTh Align="Align.Right">Budget Amount</MudTh>
-        <MudTh Align="Align.Right">Spent</MudTh>
-        <MudTh Align="Align.Right">Remaining</MudTh>
+        <MudTh align="right">Budget Amount</MudTh>
+        <MudTh align="right">Spent</MudTh>
+        <MudTh align="right">Remaining</MudTh>
         <MudTh>Status</MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="Budget">@context.BudgetName</MudTd>
-        <MudTd DataLabel="Budget Amount" Align="right">@context.BudgetAmount.ToString("C")</MudTd>
-        <MudTd DataLabel="Spent" Align="right">@context.SpentAmount.ToString("C")</MudTd>
-        <MudTd DataLabel="Remaining" Align="right">@context.RemainingAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Budget Amount" align="right">@context.BudgetAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Spent" align="right">@context.SpentAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Remaining" align="right">@context.RemainingAmount.ToString("C")</MudTd>
         <MudTd DataLabel="Status">
             <MudChip T="string" Color="@(context.IsOverBudget? Color.Error: Color.Success)" Variant="Variant.Filled" Size="Size.Small">
                 @(context.IsOverBudget ? "Over budget" : "Within budget")

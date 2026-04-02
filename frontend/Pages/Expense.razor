@@ -3,9 +3,36 @@
 @inject HttpClient Http
 @inject IDialogService DialogService
 
-<MudTable Items="expenses" Hover="true" Bordered="true" Striped="true">
+<MudTable Items="expenses"
+          Filter="FilterExpense"
+          Hover="true"
+          Bordered="true"
+          Striped="true">
     <ToolBarContent>
         <MudText Typo="Typo.h6">Expenses</MudText>
+        <MudSpacer />
+
+        <MudTextField @bind-Value="searchText"
+                      Placeholder="Search..."
+                      Immediate="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Class="me-2"
+                      Margin="Margin.Dense" />
+        <MudSpacer />
+        <MudSelect T="int?"
+                   @bind-Value="selectedBudgetId"
+                   Label="Budget"
+                   Clearable="true"
+                   Margin="Margin.Dense"
+                   Class="me-2"
+                   Style="min-width:180px;">
+            <MudSelectItem T="int?" Value="@(null)">All Budgets</MudSelectItem>
+            @foreach (var budget in budgets)
+            {
+                <MudSelectItem T="int?" Value="@budget.Id">@budget.Name</MudSelectItem>
+            }
+        </MudSelect>
         <MudSpacer />
         <MudButton Color="Color.Success"
                    Variant="Variant.Filled"
@@ -14,21 +41,23 @@
             Add Expense
         </MudButton>
     </ToolBarContent>
+
     <HeaderContent>
         <MudTh>Id</MudTh>
-        <MudTh>Name</MudTh>
+        <MudTh>Description</MudTh>
         <MudTh>Amount</MudTh>
         <MudTh>Date</MudTh>
         <MudTh>Budget</MudTh>
         <MudTh></MudTh>
     </HeaderContent>
+
     <RowTemplate>
         <MudTd>@context.Id</MudTd>
         <MudTd>@context.Description</MudTd>
         <MudTd>@context.Amount.ToString("C")</MudTd>
         <MudTd>@context.Date</MudTd>
         <MudTd>@GetBudgetName(context.BudgetId)</MudTd>
-        
+
         <MudTd>
             <MudButton Color="Color.Primary"
                        Variant="Variant.Outlined"
@@ -47,11 +76,13 @@
     </RowTemplate>
 </MudTable>
 
-
 @code {
     private List<BudgetDto> budgets = new();
     private List<ExpenseDto> expenses = new();
     private ExpenseDto newExpense = new() { Description = "New Expense", Amount = 0 };
+
+    private string searchText = string.Empty;
+    private int? selectedBudgetId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,6 +106,23 @@
         return budget?.Name ?? "Unknown";
     }
 
+    private bool FilterExpense(ExpenseDto expense)
+    {
+        if (selectedBudgetId.HasValue && expense.BudgetId != selectedBudgetId.Value)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(searchText))
+            return true;
+
+        var term = searchText.Trim();
+
+        return expense.Id.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+               || (expense.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+               || expense.Amount.ToString("0.##").Contains(term, StringComparison.OrdinalIgnoreCase)
+               || expense.Date.ToString().Contains(term, StringComparison.OrdinalIgnoreCase)
+               || GetBudgetName(expense.BudgetId).Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task AddBudgetAsync()
     {
         var dialog = await DialogService.ShowAsync<ExpenseEditorDialog>(
@@ -95,15 +143,15 @@
                 await LoadExpenses();
         }
     }
-    
+
     private async Task EditExpenseAsync(ExpenseDto expense)
     {
         var dialog = await DialogService.ShowAsync<ExpenseEditorDialog>(
             "Edit Expense",
             new DialogParameters
             {
-            { nameof(ExpenseEditorDialog.Model), expense },
-            { nameof(ExpenseEditorDialog.Budgets), budgets }
+                { nameof(ExpenseEditorDialog.Model), expense },
+                { nameof(ExpenseEditorDialog.Budgets), budgets }
             }
         );
 
@@ -125,5 +173,4 @@
         if (response.IsSuccessStatusCode)
             await LoadExpenses();
     }
-
 }

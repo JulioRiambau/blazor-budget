@@ -3,6 +3,13 @@
 @inject HttpClient Http
 @inject IDialogService DialogService
 
+@if(errorLoading)
+{
+    <MudAlert Severity="Severity.Error">
+        Error loading budgets. Please try again later.
+    </MudAlert>
+}
+
 
 <MudTable Items="budgets" Hover="true" Bordered="true" Striped="true">
     <ToolBarContent>
@@ -46,6 +53,7 @@
 @code {
     private List<BudgetDto> budgets = new();
     private BudgetDto newBudget = new() { Name = "New Budget", Amount = 0 };
+    private bool errorLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -54,7 +62,17 @@
 
     private async Task LoadBudgets()
     {
-        budgets = await Http.GetFromJsonAsync<List<BudgetDto>>("budget") ?? new();
+        try
+        {
+            budgets = await Http.GetFromJsonAsync<List<BudgetDto>>("budget") ?? new();
+            errorLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading budgets: {ex.Message}");
+            budgets = new();
+            errorLoading = true;
+        }
     }
 
     private async Task AddBudgetAsync()
