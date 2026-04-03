@@ -1,14 +1,16 @@
 [
   {
-    "Name": "New Profile",
+    "Name": "Buget Launch Profile",
     "Projects": [
       {
         "Path": "backend\\backend.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "http"
       },
       {
         "Path": "frontend\\frontend.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": "http"
       }
     ]
   }

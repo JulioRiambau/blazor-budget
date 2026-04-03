@@ -92,4 +92,20 @@ dotnet add package MudBlazor
 
 add @using MudBlazor in Imports.razor
 
-add css and js in index.html
+add css and js in index.html in wwwroot
+
+## use visual studio
+
+1.	In Solution Explorer, right-click the solution.
+2.	Select Configure Startup Projects... (or Debug > Configure Startup Projects...).
+3.	Choose Multiple startup projects.
+4.	Set both backend and frontend to Start.
+5.	Order them so backend starts first (optional but useful).
+6.	Press F5.
+
+
+check launch settings for both projects
+
+In Tools > Options > Debugging > General, make sure Enable JavaScript debugging for ASP.NET (Chrome and Edge) is checked (needed for frontend breakpoints).
+
+Note: Traditional .NET breakpoints in Dashboard.razor component files only work when using Blazor Server, not Blazor WebAssembly. For WASM debugging, you typically debug through the browser's developer tools or configure VS to enable browser debugging for managed code.
