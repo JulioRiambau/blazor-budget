@@ -1,0 +1,92 @@
+﻿@page "/trends"
+
+@inject HttpClient Http
+
+@using System.Globalization
+@using MudBlazor
+@using MudBlazor.Charts;
+@using System.Text.Json;
+
+<PageTitle>Trends</PageTitle>
+
+<MudStack Spacing="2">
+    <MudSelect T="int"
+               Label="Period"
+               Value="@selectedMonths"
+               ValueChanged="OnMonthsChanged"
+               Variant="Variant.Outlined"
+               Dense="true">
+        <MudSelectItem Value="12">Last 12 months</MudSelectItem>
+        <MudSelectItem Value="6">Last 6 months</MudSelectItem>
+        <MudSelectItem Value="3">Last 3 months</MudSelectItem>
+    </MudSelect>
+
+    <MudChart ChartType="ChartType.Line"
+              ChartSeries="@chartSeries"
+              ChartLabels="@xAxisLabels"
+              Width="100%"
+              Height="350px" />
+</MudStack>
+
+@code {
+    private List<ExpenseDto> expenses = new();
+
+    private int selectedMonths = 12;
+    private string[] xAxisLabels = Array.Empty<string>();
+    private List<ChartSeries<double>> chartSeries = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+        BuildChart();
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await Http.GetFromJsonAsync<List<ExpenseDto>>("expense") ?? new();
+    }
+
+    private Task OnMonthsChanged(int months)
+    {
+        selectedMonths = months;
+        BuildChart();
+        return Task.CompletedTask;
+    }
+
+    private void BuildChart()
+    {
+        var currentMonth = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+        var months = Enumerable.Range(0, selectedMonths)
+            .Select(i => currentMonth.AddMonths(-(selectedMonths - 1 - i)))
+            .ToArray();
+
+        Console.WriteLine($"Months: {JsonSerializer.Serialize(months)}");
+
+        var monthTotals = expenses
+            .Where(e => e.Date >= months[0] && e.Date <= currentMonth.AddMonths(1).AddDays(-1))
+            .GroupBy(e => new DateOnly(e.Date.Year, e.Date.Month, 1))
+            .ToDictionary(g => g.Key, g => (double)g.Sum(x => x.Amount));
+
+        Console.WriteLine($"monthTotals: {JsonSerializer.Serialize(monthTotals)}");
+
+        var data = months
+            .Select(m => monthTotals.TryGetValue(m, out var total) ? total : 0d)
+            .ToArray();
+
+        xAxisLabels = months
+            .Select(m => m.ToString("MMM yy", CultureInfo.InvariantCulture))
+            .ToArray();
+
+        Console.WriteLine($"xAxisLabels: {JsonSerializer.Serialize(xAxisLabels)}");
+
+        chartSeries = new List<ChartSeries<double>>
+        {
+            new()
+            {
+                Name = "Total expenses",
+                Data = data
+            }
+        };
+    }
+}
